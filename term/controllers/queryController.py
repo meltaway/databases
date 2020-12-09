@@ -1,64 +1,76 @@
-import sys
-sys.path.append('../')
-from database import Database
 from models.newsModel import News
-from sqlalchemy import select
+from models.tagModel import Tag
+from models.topicModel import Topic
+from sqlalchemy import func, select
+from database import session
+
 
 class QueryController(object):
-    def __init__(self):
-        try:
-            self.db = Database()
-            if Database is None:
-                raise Exception('No connection. Please, check your config.json or Postgre server')
+    def __init__(self, instance):
+        self.instance = instance
 
-        except Exception as err:
-            print("Connection error! ", err)
-            exit(1)
-
-    def getNewsByRatingRange(self, min: int, max: int, *args):
+    def getNewsByRatingRange(self, min: float, max: float, *args):
         try:
             if len(args) == 0:
-                stmt = select(News.title, News.date, News.rating)\
+                stmt = select(News.id, News.title, News.date, News.rating).select_from(News)\
                     .where(News.rating > min, News.rating < max)\
                     .order_by(News.rating)
-                res = self.db.session.query(stmt)
-                return res.scalars().all()
+                res = session.execute(stmt).all()
+                return res
             else:
-                stmt = select(News.title, News.date, News.rating)\
+                stmt = select(News.id, News.title, News.date, News.rating).select_from(News)\
                     .where(News.rating > min, News.rating < max)\
                     .order_by(News.rating)\
                     .limit(args[1])\
                     .offset(args[0] * args[1])
-                res = self.db.session.query(stmt)
-                return res.scalars().all()
+                res = session.execute(stmt).all()
+                return res
         except Exception as err:
-            print("getRating error: ", err)
+            raise TypeError(str(err))
 
-    def getNewsByTitleFragment(self, tit: str):
+    def getNewsByTitleFragment(self, tit: str, *args):
         try:
             if len(tit) == 0:
-                raise Exception("Incorrect word length")
-            stmt = select(News.title).where(News.title.like('%' + str(tit) + '%'))
-            res = self.db.session.query(stmt)
-            return res.scalars().all()
-        except Exception as err:
-            raise str(err)
+                raise ValueError("Incorrect word length")
 
-    def getAllNewsTags(self, nid: int):
-        try:
-            # self.db.cursor.execute(f"SELECT t.name, n.title FROM tags AS t "
-            #                        f"INNER JOIN news_tags AS nt ON t.id = nt.tag_id "
-            #                        f"INNER JOIN news AS n ON n.id = nt.news_id "
-            #                        f"WHERE n.id = {nid}")
-            # return self.db.cursor.fetchall()
-            return 0
+            if len(args) == 0:
+                stmt = select(News.id, News.title, News.date, News.rating).where(News.title.like('%' + str(tit) + '%'))
+                res = session.execute(stmt).all()
+                return res
+            else:
+                stmt = select(News.id, News.title, News.date, News.rating)\
+                    .where(News.title.like('%' + str(tit) + '%')) \
+                    .limit(args[1]) \
+                    .offset(args[0] * args[1])
+                res = session.execute(stmt).all()
+                return res
         except Exception as err:
-            raise str(err)
+            raise TypeError(str(err))
 
-    def getAllTagTopics(self, tid: int):
+    def getAllNewsTags(self, nid: int, *args):
         try:
-            stmt = select(Topic.name).where(Topic.tag_id == tid)
-            res = self.db.session.query(stmt)
-            return res.scalars().all()
+            if len(args) == 0:
+                res = session.query(Tag.id, Tag.name).join(News.Tags).filter(News.id == nid).all()
+                return res
+            else:
+                res = session.query(Tag.id, Tag.name).join(News.Tags).filter(News.id == nid)\
+                    .limit(args[1])\
+                    .offset(args[0] * args[1]).all()
+                return res
         except Exception as err:
-            raise str(err)
+            raise TypeError(str(err))
+
+    def getAllTagTopics(self, tid: int, *args):
+        try:
+            if len(args) == 0:
+                stmt = select(Topic.id, Topic.name).select_from(Topic).where(Topic.tag_id == tid)
+                res = session.execute(stmt).all()
+                return res
+            else:
+                stmt = select(Topic.id, Topic.name).select_from(Topic).where(Topic.tag_id == tid)\
+                    .limit(args[1])\
+                    .offset(args[0] * args[1]).all()
+                res = session.execute(stmt).all()
+                return res
+        except Exception as err:
+            raise TypeError(str(err))

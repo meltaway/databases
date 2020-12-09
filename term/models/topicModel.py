@@ -20,18 +20,3 @@ class Topic(Base):
     def __repr__(self):
         return "<Topic(name='%s', tag_id='%i')>" % (self.name, self.tag_id)
 
-# def generateRows(self, entitiesNum: int):
-#     start = time.time()
-#     try:
-#         self.db.cursor.execute(f"INSERT  INTO topics (name)"
-#                                f" SELECT generatestring(7)"
-#                                f" FROM generate_series(1, {entitiesNum})")
-#         self.db.connection.commit()
-#         self.db.cursor.execute(f"INSERT INTO tags_topics (tag_id, topic_id) "
-#                                f"SELECT getrandomrow('topics')::int, getrandomrow('topics')::int "
-#                                f"FROM generate_series(1, {entitiesNum})")
-#         self.db.connection.commit()
-#     except Exception as err:
-#         print("Generate Rows error! ", err)
-#     end = time.time()
-#     return str(end - start)[:9] + 's'
