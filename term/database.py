@@ -8,7 +8,7 @@ session = sessionmaker(bind=engine)()
 
 
 def defineGenerateRatingFunc():
-    session.execute("CREATE OR REPLACE FUNCTION generateRating() RETURNS float "
+    session.execute("CREATE OR REPLACE FUNCTION generaterating() RETURNS float "
                         "LANGUAGE plpgsql "
                         "AS "
                         "$$ "
@@ -22,7 +22,7 @@ def defineGenerateRatingFunc():
 
 
 def defineGenerateStringFunc():
-    session.execute("CREATE OR REPLACE FUNCTION generateString(length int) RETURNS text "
+    session.execute("CREATE OR REPLACE FUNCTION generatestring(length int) RETURNS text "
                         "LANGUAGE plpgsql "
                         "AS "
                         "$$ "
@@ -40,15 +40,12 @@ def defineGenerateDateFunc():
                         "LANGUAGE plpgsql "
                         "AS "
                         "$$ "
-                        "DECLARE outputDate text;"
+                        "DECLARE outputDate text; "
                         "BEGIN "
-                        "WITH last_date AS ("
-                        "SELECT date FROM news "
-                        "ORDER BY id DESC "
-                        "LIMIT 1) "
+                        "WITH last_date AS (SELECT date FROM news ORDER BY id DESC LIMIT 1) "
                         "SELECT ((SELECT * FROM last_date)::timestamp + '1 day'::interval)::date::text "
-                        "INTO outputDate; "
-                        "RETURN outputDate;"
+                        "INTO outputDate;"
+                        "RETURN outputDate; "
                         "END; "
                         "$$;")
     session.commit()
@@ -84,14 +81,6 @@ def defineGetRandomRow():
     session.commit()
 
 
-def defineTagTrigger():
-    return 0
-
-
-def defineRatingTrigger():
-    return 0
-
-
 def defineIndeces():
     session.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm; "
                     "CREATE INDEX title_gin_idx ON news USING gin(title gin_trgm_ops);"
@@ -99,7 +88,31 @@ def defineIndeces():
                     "CREATE INDEX news_id_index ON news(id); "
                     "CREATE INDEX tags_id_index ON tags(id); "
                     "CREATE INDEX topics_id_index ON topics(id); "
-                    "CREATE INDEX link_id_index ON news_tags (tag_id, news_id);")
+                    "CREATE INDEX link_id_index ON news_tags(tag_id, news_id); "
+                    "CREATE INDEX ratings_id_index ON ratings(id); ")
+    session.commit()
+
+
+def defineRatingTrigger():
+    session.execute("CREATE OR REPLACE FUNCTION generation_rating_trigger() RETURNS trigger AS "
+                    "$$ "
+                    "BEGIN "
+                    "INSERT INTO ratings(news_id, date, rating) VALUES (New.id, now()::timestamp, New.rating); "
+                    "return New; "
+                    "END; "
+                    "$$ "
+                    "LANGUAGE plpgsql; "
+                    "CREATE TRIGGER generation_rating_trigger AFTER INSERT OR UPDATE ON news "
+                    "FOR EACH ROW EXECUTE PROCEDURE generation_rating_trigger()")
+    session.commit()
+
+
+def insertStarterEntities():
+    session.execute("INSERT INTO news (id, date, title, category, description, rating) "
+                    "VALUES(1, '1970-01-01', 'A Good Title', 'news', 'A good description.', 5.0); "
+                    "INSERT INTO tags (id, name) VALUES (1, 'news'); "
+                    "INSERT INTO news_tags (tag_id, news_id) VALUES (1, 1); "
+                    "INSERT INTO topics (id, name, tag_id) VALUES (1, 'general', 1);")
     session.commit()
 
 def recreate_database():
@@ -109,5 +122,5 @@ def recreate_database():
     defineGenerateStringFunc()
     defineGenerateIntFunc()
     defineGenerateRatingFunc()
-    defineTagTrigger()
     defineRatingTrigger()
+    insertStarterEntities()

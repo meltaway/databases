@@ -9,18 +9,16 @@ class QueryController(object):
     def __init__(self, instance):
         self.instance = instance
 
-    def getNewsByRatingRange(self, min: float, max: float, *args):
+    def getNewsByRatingRange(self, minr: float, maxr: float, *args):
         try:
             if len(args) == 0:
                 stmt = select(News.id, News.title, News.date, News.rating).select_from(News)\
-                    .where(News.rating > min, News.rating < max)\
-                    .order_by(News.rating)
+                    .where(News.rating > minr, News.rating < maxr)
                 res = session.execute(stmt).all()
                 return res
             else:
                 stmt = select(News.id, News.title, News.date, News.rating).select_from(News)\
-                    .where(News.rating > min, News.rating < max)\
-                    .order_by(News.rating)\
+                    .where(News.rating > minr, News.rating < maxr)\
                     .limit(args[1])\
                     .offset(args[0] * args[1])
                 res = session.execute(stmt).all()

@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from database import Base
-import time
+
 
 class Topic(Base):
     __tablename__ = 'topics'

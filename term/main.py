@@ -4,27 +4,28 @@ from CUI.cui import CUI
 from models.newsModel import News
 from models.tagModel import Tag
 from models.topicModel import Topic
-import numpy
+from models.ratingsModel import Rating
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sqlalchemy import func
 
-# recreate_database()
+#recreate_database()
 
-cui = CUI("Main Menu")
-cui.addField("News", lambda: EntityView(News).run())
-cui.addField("Tags", lambda: EntityView(Tag).run())
-cui.addField("Topics", lambda: EntityView(Topic).run())
-cui.run()
-
-session.close()
-
-
-# items = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-# page = 0
-# per_page = 3
+# cui = CUI("Main Menu")
+# cui.addField("News", lambda: EntityView(News).run())
+# cui.addField("Tags", lambda: EntityView(Tag).run())
+# cui.addField("Topics", lambda: EntityView(Topic).run())
+# cui.run()
 #
-# page -= 1
-# if page * per_page + per_page > len(items) - 1:
-#     newitems = items[page * per_page:]
-# else:
-#     newitems = items[page * per_page: (page + 1) * per_page]
-#
-# print(newitems)
+# session.close()
+
+ratings = session.query(Rating.rating, Rating.date).where(News.id == 1).order_by(Rating.date).offset(3).all()
+
+listed = list(zip(*ratings))
+ts = pd.Series(np.array(listed[0]), index=listed[1])
+ts = ts.cumsum()
+# ts.plot()
+
+plt.plot(ts)
+plt.show()

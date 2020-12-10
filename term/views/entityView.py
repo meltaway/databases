@@ -16,6 +16,10 @@ class EntityView:
         self.rating_page = 1
         self.per_page = 10
 
+        self.title = None
+        self.minr = None
+        self.maxr = None
+
         self.itemsCurrentMenu = [None, None]
 
         self.CUI = CUI(f"{self.instance.__name__} Menu")
@@ -126,15 +130,15 @@ class EntityView:
         menu.stop()
         self.__getTagTopics(tid)
 
-    def __updateTitleSearch(self, page: int, menu, title: str):
+    def __updateTitleSearch(self, page: int, menu):
         self.title_page = page
         menu.stop()
         self.__searchNewsTitle()
 
-    def __updateRatingSearch(self, page: int, menu, min: float, max: float):
-        self.title_page = page
+    def __updateRatingSearch(self, page: int, menu):
+        self.rating_page = page
         menu.stop()
-        self.__searchNewsTitle()
+        self.__searchNewsRating()
 
     def __delete(self, id: int):
         self.EController.delete(id)
@@ -145,42 +149,49 @@ class EntityView:
         itemMenu = CUI(self.instance.__name__)
         self.itemsCurrentMenu[1] = itemMenu
         try:
-            title = str(input("Enter title: "))
+            if self.title is None:
+                self.title = str(input("Enter title: "))
 
-            news = self.QController.getNewsByTitleFragment(title)
+            news = self.QController.getNewsByTitleFragment(self.title)
             if self.title_page < math.ceil(len(news) / self.per_page):
-                itemMenu.addField(">>>", lambda: self.__updateTitleSearch(self.title_page + 1, itemMenu, title))
+                itemMenu.addField(">>>", lambda: self.__updateTitleSearch(self.title_page + 1, itemMenu))
             if self.title_page > 1:
-                itemMenu.addField("<<<", lambda: self.__updateTitleSearch(self.title_page - 1, itemMenu, title))
-            news = self.QController.getNewsByTitleFragment(title, self.title_page, self.per_page)
+                itemMenu.addField("<<<", lambda: self.__updateTitleSearch(self.title_page - 1, itemMenu))
+            news = self.QController.getNewsByTitleFragment(self.title, self.title_page, self.per_page)
 
             for n in news:
                itemMenu.addField(f"\"{n.title}\"     ({n.date})     *{n.rating}", lambda id=n.id: self.__getItem(id))
         except Exception as err:
             itemMenu.setError(str(err))
         itemMenu.run("Back to Previous Menu")
+        self.title_page = 1
+        self.title = None
 
     def __searchNewsRating(self):
         itemMenu = CUI(self.instance.__name__)
         self.itemsCurrentMenu[1] = itemMenu
         try:
-            min = float(input("Enter min rating: "))
-            max = float(input("Enter max rating: "))
-            if not (isinstance(min, float) and isinstance(max, float) and max >= min and min > 0 and max > 0):
+            if self.minr is None and self.maxr is None:
+                self.minr = float(input("Enter min rating: "))
+                self.maxr = float(input("Enter max rating: "))
+            if not (isinstance(self.minr, float) and isinstance(self.maxr, float) and self.maxr >= self.minr and self.minr > 0 and self.maxr > 0):
                 raise ValueError("Invalid input")
 
-            news = self.QController.getNewsByRatingRange(min, max)
+            news = self.QController.getNewsByRatingRange(self.minr, self.maxr)
             if self.rating_page < math.ceil(len(news) / self.per_page):
-                itemMenu.addField(">>>", lambda: self.__updateRatingSearch(self.rating_page + 1, self.per_page))
+                itemMenu.addField(">>>", lambda: self.__updateRatingSearch(self.rating_page + 1, itemMenu))
             if self.rating_page > 1:
-                itemMenu.addField("<<<", lambda: self.__updateRatingSearch(self.rating_page - 1, self.per_page))
-            news = self.QController.getNewsByRatingRange(min, max, self.rating_page, self.per_page)
+                itemMenu.addField("<<<", lambda: self.__updateRatingSearch(self.rating_page - 1, itemMenu))
+            news = self.QController.getNewsByRatingRange(self.minr, self.maxr, self.rating_page, self.per_page)
 
             for n in news:
-                itemMenu.addField(f"[{n.id}] \"{n.title}\"     ({n.date})     *{n.rating}", lambda id=n.id: self.__getItem(id))
+                itemMenu.addField(f"\"{n.title}\"     ({n.date})     *{n.rating}", lambda id=n.id: self.__getItem(id))
         except Exception as err:
             itemMenu.setError(str(err))
         itemMenu.run("Back to Previous Menu")
+        self.rating_page = 1
+        self.minr = None
+        self.maxr = None
 
     def __getNewsTags(self, nid: int):
         itemMenu = CUI(self.instance.__name__)

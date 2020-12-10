@@ -2,7 +2,6 @@ from sqlalchemy import Column, Integer, Float, Date, func, String
 from sqlalchemy.orm import relationship
 from models.links import links_news_tags
 from database import Base
-import time
 
 
 class News(Base):
@@ -18,15 +17,13 @@ class News(Base):
     # M:N relationship
     Tags = relationship('Tag', secondary=links_news_tags)
 
-    def __init__(self, date: str, title: str, category: str, description: str, rating: float, past_rating_sum: float, history_num: int):
+    def __init__(self, date: str, title: str, category: str, description: str, rating: float):
         self.date = date
         self.title = title
         self.category = category
         self.description = description
         self.rating = rating
-        self.past_rating_sum = past_rating_sum
-        self.history_num = history_num
 
     def __repr__(self):
-        return "<News(date='%s', title='%s', category='%s', description='%s', rating='%f', past_rating_sum='%f', history_num='%i')>"\
-               % (self.date, self.title, self.category, self.description, self.rating, self.past_rating_sum, self.history_num)
+        return "<News(date='%s', title='%s', category='%s', description='%s', rating='%f')>"\
+               % (self.date, self.title, self.category, self.description, self.rating)

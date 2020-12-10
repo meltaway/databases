@@ -2,7 +2,6 @@ from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 from models.links import links_news_tags
 from database import Base
-import time
 
 
 class Tag(Base):
