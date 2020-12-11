@@ -1,49 +1,15 @@
 from sqlalchemy import func, select, update
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from database import session
+from models.ratingsModel import Rating
+from models.newsModel import News
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 
 class EntityController(object):
     def __init__(self, instance):
         self.instance = instance
-
-    def generateNews(self, n: int):
-        try:
-            session.execute(f"INSERT INTO news (date, title, category, description, rating) "
-                               f"SELECT generatedate()::date, "
-                               f"generatestring(30), "
-                               f"generatestring(10), "
-                               f"generatestring(100), "
-                               f"generaterating() "
-                               f"FROM generate_series(1, {n}) "
-                               f"ORDER BY generatedate()")
-            session.commit()
-            session.execute(f"INSERT INTO news_tags (tag_id, news_id) "
-                               f"SELECT getrandomrow('tags')::int, getrandomrow('news')::int "
-                               f"FROM generate_series(1, {n})")
-            session.commit()
-        except Exception as err:
-            raise ValueError("generateNews error: " + str(err))
-        return True
-
-    def generateTags(self, n: int):
-        try:
-            session.execute(f"INSERT INTO tags (name)"
-                               f" SELECT generatestring(7)"
-                               f" FROM generate_series(1, {n})")
-            session.commit()
-        except Exception as err:
-            raise ValueError("generateTags error: " + str(err))
-        return True
-
-    def generateTopics(self, n: int):
-        try:
-            session.execute(f"INSERT INTO topics (name, tag_id)"
-                               f" SELECT generatestring(7), getrandomrow('tags')::int"
-                               f" FROM generate_series(1, {n})")
-            session.commit()
-        except Exception as err:
-            raise ValueError("generateTopics error: " + str(err))
-        return True
 
     def getPaginate(self, page: int, per_page: int):
         items = []
@@ -67,6 +33,11 @@ class EntityController(object):
             session.add(item)
             session.commit()
             session.refresh(item)
+
+            if self.instance.__name__ == 'News':
+                session.execute(f"INSERT INTO news_tags (tag_id, news_id) "
+                                f"SELECT getrandomrow('tags')::int, {item.id} ")
+                session.commit()
             return item.id
         except Exception as err:
             raise ValueError("Add error: " + str(err))
@@ -104,7 +75,7 @@ class EntityController(object):
         for entity in self.instance.__dict__.items():
             key = entity[0]
             key_type = entity[1]
-            if type(key_type) is InstrumentedAttribute and key is not 'id' and key is not 'past_rating_sum' and key is not 'history_num' and not key[0].isupper():
+            if type(key_type) is InstrumentedAttribute and key != 'id' and not key[0].isupper():
                 keys.append(key)
         return keys
 
@@ -113,6 +84,6 @@ class EntityController(object):
         for entity in item.__dict__.items():
             key = entity[0]
             value = entity[1]
-            if key != '_sa_instance_state' and key != 'id' and key != 'past_rating_sum' and key != 'history_num':
+            if key != '_sa_instance_state' and key != 'id':
                 mapped_values[key] = value
         return mapped_values

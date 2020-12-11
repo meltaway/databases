@@ -13,9 +13,9 @@ class Rating(Base):
 
     News = relationship('News', backref=backref('Rating'))
 
-    def __init__(self, news_id: int, date: str, rating: float):
+    def __init__(self, news_id: int, rating: float):
         self.news_id = news_id
-        self.date = date
+        # self.date = date
         self.rating = rating
 
     def __repr__(self):

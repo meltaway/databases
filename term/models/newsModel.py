@@ -15,7 +15,7 @@ class News(Base):
     rating = Column(Float, nullable=False, default=0.0)
 
     # M:N relationship
-    Tags = relationship('Tag', secondary=links_news_tags)
+    Tags = relationship('Tag', secondary=links_news_tags, overlaps="Tag.News")
 
     def __init__(self, date: str, title: str, category: str, description: str, rating: float):
         self.date = date

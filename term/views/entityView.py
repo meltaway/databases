@@ -1,6 +1,9 @@
 import math
 from controllers.entityController import EntityController
 from controllers.queryController import QueryController
+from controllers.randomController import RandomController
+from controllers.graphController import GraphController
+from controllers.parseController import ParseController
 from CUI.cui import CUI
 
 exec_bad_chars = set('{}()[],;+*\/')
@@ -25,10 +28,14 @@ class EntityView:
         self.CUI = CUI(f"{self.instance.__name__} Menu")
         self.EController = EntityController(instance)
         self.QController = QueryController(instance)
+        self.RController = RandomController()
+        self.GController = GraphController()
+        self.PController = ParseController()
 
         self.CUI.addField(f"Add {self.instance.__name__}", lambda: self.__add())
         self.CUI.addField(f"{self.instance.__name__}", lambda: self.__getItems())
         self.CUI.addField("Generate rows", lambda: self.__generateRows())
+        self.CUI.addField("Parse MIND dataset", lambda: self.__parseDataset())
 
         if self.instance.__name__ == "News":
             self.CUI.addField("Search by title fragment", lambda: self.__searchNewsTitle())
@@ -44,17 +51,24 @@ class EntityView:
                 raise Exception("Invalid input")
 
             if self.instance.__name__ == "News":
-                if not self.EController.generateNews(n):
+                if not self.RController.generateNews(n):
                     raise Exception("Could not generate news!")
             if self.instance.__name__ == "Tag":
-                if not self.EController.generateTags(n):
+                if not self.RController.generateTags(n):
                     raise Exception("Could not generate tags!")
             if self.instance.__name__ == "Topic":
-                if not self.EController.generateTopics(n):
+                if not self.RController.generateTopics(n):
                     raise Exception("Could not generate topics!")
+        except Exception as err:
+            itemMenu.setError(str(err))
 
-            self.itemsCurrentMenu[1].stop()
-            self.__supportCUIFunc()
+    def __parseDataset(self):
+        itemMenu = CUI(self.instance.__name__)
+        self.itemsCurrentMenu[1] = itemMenu
+        try:
+            itemMenu.setError("Please wait, this may take a long time...")
+            time = self.PController.parseDataset()
+            itemMenu.setError(time + " (done)")
         except Exception as err:
             itemMenu.setError(str(err))
 
@@ -85,9 +99,10 @@ class EntityView:
                 itemMenu.addField(str(key) + " : " + str(value))
 
             if self.instance.__name__ == "News":
-                itemMenu.addField("Show tags", lambda: self.__getNewsTags(item.id))
+                itemMenu.addField("Show Tags", lambda: self.__getNewsTags(item.id))
+                itemMenu.addField("Show Ratings Graph", lambda: self.__getRatingsGraph(item.id))
             if self.instance.__name__ == "Tag":
-                itemMenu.addField("Show topics", lambda: self.__getTagTopics(item.id))
+                itemMenu.addField("Show Topics", lambda: self.__getTagTopics(item.id))
 
             itemMenu.addField("UPDATE", lambda: self.__update(item))
             itemMenu.addField("DELETE", lambda: self.__delete(item.id))
@@ -224,6 +239,9 @@ class EntityView:
         except Exception as err:
             itemMenu.setError(str(err))
         itemMenu.run("Back to Previous Menu")
+
+    def __getRatingsGraph(self, nid: int):
+        self.GController.getRatingsGraph(nid)
 
     def __changePageParams(self, page: int, per_page: int):
         self.page = page

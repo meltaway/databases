@@ -11,7 +11,7 @@ class Tag(Base):
     name = Column(String, unique=True, nullable=False, default='news')
 
     # M:N relationship
-    News = relationship('News', secondary=links_news_tags)
+    News = relationship('News', secondary=links_news_tags, overlaps='News.Tags')
 
     def __init__(self, name: str):
         self.name = name
