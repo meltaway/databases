@@ -1,4 +1,5 @@
 import math
+import datetime
 from controllers.entityController import EntityController
 from controllers.queryController import QueryController
 from controllers.randomController import RandomController
@@ -17,11 +18,14 @@ class EntityView:
         self.topics_page = 1
         self.title_page = 1
         self.rating_page = 1
+        self.date_page = 1
         self.per_page = 10
 
         self.title = None
         self.minr = None
         self.maxr = None
+        self.mind = None
+        self.maxd = None
 
         self.itemsCurrentMenu = [None, None]
 
@@ -35,11 +39,12 @@ class EntityView:
         self.CUI.addField(f"Add {self.instance.__name__}", lambda: self.__add())
         self.CUI.addField(f"{self.instance.__name__}", lambda: self.__getItems())
         self.CUI.addField("Generate rows", lambda: self.__generateRows())
-        self.CUI.addField("Parse MIND dataset", lambda: self.__parseDataset())
 
         if self.instance.__name__ == "News":
+            self.CUI.addField("Parse MIND dataset", lambda: self.__parseDataset())
             self.CUI.addField("Search by title fragment", lambda: self.__searchNewsTitle())
             self.CUI.addField("Search by rating range", lambda: self.__searchNewsRating())
+            self.CUI.addField("Search by date range", lambda: self.__searchNewsDate())
 
 
     def __generateRows(self):
@@ -69,6 +74,7 @@ class EntityView:
             itemMenu.setError("Please wait, this may take a long time...")
             time = self.PController.parseDataset()
             itemMenu.setError(time + " (done)")
+            itemMenu.deleteField("Parse MIND dataset")
         except Exception as err:
             itemMenu.setError(str(err))
 
@@ -80,7 +86,7 @@ class EntityView:
                 itemMenu.addField(">>>", lambda: self.__changePageParams(self.page + 1, self.per_page))
             if self.page > 1:
                 itemMenu.addField("<<<", lambda: self.__changePageParams(self.page - 1, self.per_page))
-            entities = self.EController.getPaginate(self.page, self.per_page)
+            entities = self.EController.getPaginated(self.page, self.per_page)
             for entity in entities:
                 if self.instance.__name__ == "News":
                     itemMenu.addField(f"\"{entity.title}\"     ({entity.date})     *{entity.rating}", lambda id=entity.id: self.__getItem(id))
@@ -95,7 +101,7 @@ class EntityView:
         self.itemsCurrentMenu[1] = itemMenu
         try:
             item = self.EController.getById(id)
-            for (key, value) in self.EController.getModelEntityMappedKeys(item).items():
+            for (key, value) in self.EController.getEntityMappedKeys(item).items():
                 itemMenu.addField(str(key) + " : " + str(value))
 
             if self.instance.__name__ == "News":
@@ -106,7 +112,7 @@ class EntityView:
 
             itemMenu.addField("UPDATE", lambda: self.__update(item))
             itemMenu.addField("DELETE", lambda: self.__delete(item.id))
-            itemMenu.addField("Back to Previous Menu", lambda: self.__supportCUIFunc())
+            itemMenu.addField("Back to Previous Menu", lambda: self.__supportCUI())
         except Exception as err:
             itemMenu.setError(str(err))
         itemMenu.run(False)
@@ -114,7 +120,7 @@ class EntityView:
     def __add(self):
         try:
             mapped = {}
-            self.__createEntityMenu(mapped)
+            self.__addMenu(mapped)
             execStr = ""
             for value in mapped.values():
                 if value is None or (isinstance(value, str) and any((char in exec_bad_chars) for char in value)):
@@ -130,7 +136,7 @@ class EntityView:
             self.CUI.setError(str(err))
 
     def __update(self, item):
-        self.__createEntityMenu(item)
+        self.__addMenu(item)
         self.EController.update(item)
         self.itemsCurrentMenu[1].stop()
         self.__getItem(item.id)
@@ -155,10 +161,15 @@ class EntityView:
         menu.stop()
         self.__searchNewsRating()
 
+    def __updateDateSearch(self, page: int, menu):
+        self.date_page = page
+        menu.stop()
+        self.__searchNewsDate()
+
     def __delete(self, id: int):
         self.EController.delete(id)
         self.itemsCurrentMenu[1].stop()
-        self.__supportCUIFunc()
+        self.__supportCUI()
 
     def __searchNewsTitle(self):
         itemMenu = CUI(self.instance.__name__)
@@ -208,6 +219,42 @@ class EntityView:
         self.minr = None
         self.maxr = None
 
+    def __searchNewsDate(self):
+        itemMenu = CUI(self.instance.__name__)
+        self.itemsCurrentMenu[1] = itemMenu
+        try:
+            if self.mind is None and self.maxd is None:
+                self.mind = str(input("Enter starting date (inclusive) [YYYY-MM-DD]: "))
+                self.maxd = str(input("Enter endind date (inclusive) [YYYY-MM-DD]: "))
+            if not (isinstance(self.mind, str) and isinstance(self.maxd, str) and self.maxd >= self.mind):
+                raise ValueError("Invalid input")
+
+            date1 = None
+            date2 = None
+            try:
+                date1 = datetime.datetime(int(self.mind.split('-')[0]), int(self.mind.split('-')[1]),
+                                        int(self.mind.split('-')[2]))
+                date2 = datetime.datetime(int(self.maxd.split('-')[0]), int(self.maxd.split('-')[1]),
+                                        int(self.maxd.split('-')[2]))
+            except Exception:
+                raise ValueError("Invalid input")
+
+            news = self.QController.getNewsByDateRange(date1, date2)
+            if self.date_page < math.ceil(len(news) / self.per_page):
+                itemMenu.addField(">>>", lambda: self.__updateDateSearch(self.date_page + 1, itemMenu))
+            if self.date_page > 1:
+                itemMenu.addField("<<<", lambda: self.__updateDateSearch(self.date_page - 1, itemMenu))
+            news = self.QController.getNewsByDateRange(date1, date2, self.date_page, self.per_page)
+
+            for n in news:
+                itemMenu.addField(f"\"{n.title}\"     ({n.date})     *{n.rating}", lambda id=n.id: self.__getItem(id))
+        except Exception as err:
+            itemMenu.setError(str(err))
+        itemMenu.run("Back to Previous Menu")
+        self.date_page = 1
+        self.mind = None
+        self.maxd = None
+
     def __getNewsTags(self, nid: int):
         itemMenu = CUI(self.instance.__name__)
         try:
@@ -229,10 +276,10 @@ class EntityView:
         try:
             topics = self.QController.getAllTagTopics(tid)
             if self.topics_page < math.ceil(len(topics) / self.per_page):
-                itemMenu.addField(">>>", lambda: self.__updateTopics(self.tags_page + 1, itemMenu, tid))
+                itemMenu.addField(">>>", lambda: self.__updateTopics(self.topics_page + 1, itemMenu, tid))
             if self.topics_page > 1:
-                itemMenu.addField("<<<", lambda: self.__updateTopics(self.tags_page - 1, itemMenu, tid))
-            topics = self.QController.getAllNewsTags(tid, self.topics_page, self.per_page)
+                itemMenu.addField("<<<", lambda: self.__updateTopics(self.topics_page - 1, itemMenu, tid))
+            topics = self.QController.getAllTagTopics(tid, self.topics_page, self.per_page)
 
             for t in topics:
                 itemMenu.addField(f"[{t.id}] {t.name}")
@@ -249,11 +296,11 @@ class EntityView:
         self.itemsCurrentMenu[0].stop()
         self.__getItems()
 
-    def __supportCUIFunc(self):
+    def __supportCUI(self):
         self.itemsCurrentMenu[1].stop()
         self.__changePageParams(self.page, self.per_page)
 
-    def __supportcreateItemFunc(self, key, value, item):
+    def __supportAddCUI(self, key, value, item):
         try:
             new = input(f"Enter new {key} value: ")
             if isinstance(new, str) and len(new) > 0:
@@ -267,7 +314,7 @@ class EntityView:
         except Exception as err:
             self.currentMenu.setError(str(err))
 
-    def __supportcreateFunc(self, key, mapped):
+    def __supportAdd(self, key, mapped):
         try:
             value = input(f"Enter new {key} value: ")
             old = None
@@ -288,18 +335,18 @@ class EntityView:
         except Exception as err:
             self.currentMenu.setError(str(err))
 
-    def __createEntityMenu(self, *args):
+    def __addMenu(self, *args):
         self.currentMenu = CUI(f"{self.instance.__name__} Creation")
         try:
             if len(args) > 0 and isinstance(args[0], self.instance):
                 item = args[0]
-                for (key, value) in self.EController.getModelEntityMappedKeys(item).items():
-                    self.currentMenu.addField(f"{key}: {value}", lambda key=key, value=value: self.__supportcreateItemFunc(key, value, item))
+                for (key, value) in self.EController.getEntityMappedKeys(item).items():
+                    self.currentMenu.addField(f"{key}: {value}", lambda key=key, value=value: self.__supportAddCUI(key, value, item))
             elif len(args) > 0 and isinstance(args[0], dict):
                 mapped = args[0]
                 for key in self.EController.getModelKeys():
                     mapped[key] = None
-                    self.currentMenu.addField(f"{key}", lambda key=key: self.__supportcreateFunc(key, mapped))
+                    self.currentMenu.addField(f"{key}", lambda key=key: self.__supportAdd(key, mapped))
             else:
                 raise Exception("Invalid arguments")
         except Exception as err:

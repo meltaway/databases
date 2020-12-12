@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Index
 from sqlalchemy.orm import relationship, backref
 from database import Base
 
@@ -12,6 +12,9 @@ class Topic(Base):
 
     # 1:M relationship
     Tag = relationship('Tag', backref=backref('Topic', uselist=False))
+    __table_args__ = (
+        Index('topics_id_idx', id),
+    )
 
     def __init__(self, name: str, tag_id: int):
         self.name = name

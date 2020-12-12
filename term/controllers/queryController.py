@@ -3,7 +3,7 @@ from models.tagModel import Tag
 from models.topicModel import Topic
 from sqlalchemy import func, select
 from database import session
-
+import datetime
 
 class QueryController(object):
     def __init__(self, instance):
@@ -11,14 +11,15 @@ class QueryController(object):
 
     def getNewsByRatingRange(self, minr: float, maxr: float, *args):
         try:
-            if len(args) == 0:
+            count = session.execute(select([func.count()]).select_from(self.instance)).scalar()
+            if len(args) == 0 or count < args[1]:
                 stmt = select(News.id, News.title, News.date, News.rating).select_from(News)\
-                    .where(News.rating > minr, News.rating < maxr)
+                    .where(News.rating >= minr, News.rating <= maxr)
                 res = session.execute(stmt).all()
                 return res
             else:
                 stmt = select(News.id, News.title, News.date, News.rating).select_from(News)\
-                    .where(News.rating > minr, News.rating < maxr)\
+                    .where(News.rating >= minr, News.rating <= maxr)\
                     .limit(args[1])\
                     .offset(args[0] * args[1])
                 res = session.execute(stmt).all()
@@ -28,10 +29,11 @@ class QueryController(object):
 
     def getNewsByTitleFragment(self, tit: str, *args):
         try:
+            count = session.execute(select([func.count()]).select_from(self.instance)).scalar()
             if len(tit) == 0:
                 raise ValueError("Incorrect word length")
 
-            if len(args) == 0:
+            if len(args) == 0 or count < args[1]:
                 stmt = select(News.id, News.title, News.date, News.rating).where(News.title.like('%' + str(tit) + '%'))
                 res = session.execute(stmt).all()
                 return res
@@ -45,11 +47,29 @@ class QueryController(object):
         except Exception as err:
             raise TypeError(str(err))
 
+    def getNewsByDateRange(self, mind: datetime, maxd: datetime, *args):
+        try:
+            count = session.execute(select([func.count()]).select_from(self.instance)).scalar()
+            if len(args) == 0 or count < args[1]:
+                stmt = f"SELECT id, title, date, rating FROM news " \
+                       f"WHERE date >= '{mind.strftime('%Y-%m-%d')}' AND date <= '{maxd.strftime('%Y-%m-%d')}'"
+                res = session.execute(stmt).all()
+                return res
+            else:
+                stmt = f"SELECT id, title, date, rating FROM news " \
+                       f"WHERE date >= '{mind.strftime('%Y-%m-%d')}' AND date <= '{maxd.strftime('%Y-%m-%d')}' " \
+                       f"LIMIT {args[1]} " \
+                       f"OFFSET {args[0] * args[1]}"
+                res = session.execute(stmt).all()
+                return res
+        except Exception as err:
+            raise TypeError(str(err))
+
     def getAllNewsTags(self, nid: int, *args):
         try:
-            if len(args) == 0:
-                res = session.query(Tag.id, Tag.name).join(News.Tags).filter(News.id == nid).all()
-                return res
+            count = session.execute(select([func.count()]).select_from(self.instance)).scalar()
+            if len(args) == 0 or count < args[1]:
+                return session.query(Tag.id, Tag.name).join(News.Tags).filter(News.id == nid).all()
             else:
                 res = session.query(Tag.id, Tag.name).join(News.Tags).filter(News.id == nid)\
                     .limit(args[1])\
@@ -60,12 +80,11 @@ class QueryController(object):
 
     def getAllTagTopics(self, tid: int, *args):
         try:
-            if len(args) == 0:
-                stmt = select(Topic.id, Topic.name).select_from(Topic).where(Topic.tag_id == tid)
-                res = session.execute(stmt).all()
-                return res
+            count = session.execute(select([func.count()]).select_from(self.instance)).scalar()
+            if len(args) == 0 or count < args[1]:
+                return session.query(Topic.id, Topic.name).select_from(Topic).where(Topic.tag_id == tid).all()
             else:
-                stmt = select(Topic.id, Topic.name).select_from(Topic).where(Topic.tag_id == tid)\
+                stmt = session.query(Topic.id, Topic.name).select_from(Topic).where(Topic.tag_id == tid)\
                     .limit(args[1])\
                     .offset(args[0] * args[1]).all()
                 res = session.execute(stmt).all()

@@ -1,5 +1,5 @@
-from sqlalchemy import Column, Integer, Float, Date, func, String
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, Float, Date, func, String, Index
+from sqlalchemy.orm import relationship, backref
 from models.links import links_news_tags
 from database import Base
 
@@ -14,8 +14,16 @@ class News(Base):
     description = Column(String)
     rating = Column(Float, nullable=False, default=0.0)
 
+    # 1:M relationship
+    Ratings = relationship('Rating', cascade="all, delete", passive_deletes=True)
     # M:N relationship
-    Tags = relationship('Tag', secondary=links_news_tags, overlaps="Tag.News")
+    Tags = relationship('Tag', secondary=links_news_tags, backref='news')
+
+    __table_args__ = (
+        Index('title_gin_idx', "title", postgresql_ops={"title": "gin_trgm_ops"}, postgresql_using='gin'),
+        Index('date_brin_idx', "date", postgresql_using='brin'),
+        Index('news_id_idx', id),
+    )
 
     def __init__(self, date: str, title: str, category: str, description: str, rating: float):
         self.date = date

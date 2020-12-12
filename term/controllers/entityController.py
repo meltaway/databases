@@ -3,15 +3,13 @@ from sqlalchemy.orm.attributes import InstrumentedAttribute
 from database import session
 from models.ratingsModel import Rating
 from models.newsModel import News
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
+
 
 class EntityController(object):
     def __init__(self, instance):
         self.instance = instance
 
-    def getPaginate(self, page: int, per_page: int):
+    def getPaginated(self, page: int, per_page: int):
         items = []
         try:
             page -= 1
@@ -47,6 +45,8 @@ class EntityController(object):
             tbd = self.getById(id)
             if tbd is None:
                 raise Exception(f"Entity by id ({id}) does not exist")
+            if self.instance.__name__ == 'News':
+                session.execute(f"DELETE FROM news_tags WHERE news_id = {id}; ")
             session.query(self.instance).filter(self.instance.id == id).delete()
             session.commit()
             return tbd
@@ -79,7 +79,7 @@ class EntityController(object):
                 keys.append(key)
         return keys
 
-    def getModelEntityMappedKeys(self, item):
+    def getEntityMappedKeys(self, item):
         mapped_values = {}
         for entity in item.__dict__.items():
             key = entity[0]

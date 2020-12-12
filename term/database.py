@@ -81,17 +81,9 @@ def defineGetRandomRow():
     session.commit()
 
 
-def defineIndeces():
-    session.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm; "
-                    "CREATE INDEX title_gin_idx ON news USING gin(title gin_trgm_ops);"
-                    "CREATE INDEX date_brin_idx ON news USING brin(date); "
-                    "CREATE INDEX news_id_index ON news(id); "
-                    "CREATE INDEX tags_id_index ON tags(id); "
-                    "CREATE INDEX topics_id_index ON topics(id); "
-                    "CREATE INDEX link_id_index ON news_tags(tag_id, news_id); "
-                    "CREATE INDEX ratings_id_index ON ratings(id); ")
+def defineExtensions():
+    session.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm; CREATE EXTENSION IF NOT EXISTS btree_gin; ")
     session.commit()
-
 
 def defineRatingTrigger():
     session.execute("CREATE OR REPLACE FUNCTION generation_rating_trigger() RETURNS trigger AS "
@@ -162,6 +154,9 @@ def recreate_database():
     defineGenerateStringFunc()
     defineGenerateIntFunc()
     defineGenerateRatingFunc()
+    defineGetRandomRow()
+    defineExtensions()
     defineRatingTrigger()
+    defineTagTrigger()
     insertStarterEntities()
     autoincremetFix()
