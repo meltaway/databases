@@ -1,10 +1,9 @@
-from sqlalchemy import func, select, update
-from sqlalchemy.orm.attributes import InstrumentedAttribute
+# from sqlalchemy import func, select, update
+# from sqlalchemy.orm.attributes import InstrumentedAttribute
 from database import session
 from models.ratingsModel import Rating
 from models.newsModel import News
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 
 

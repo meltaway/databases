@@ -5,6 +5,7 @@ from controllers.queryController import QueryController
 from controllers.randomController import RandomController
 from controllers.graphController import GraphController
 from controllers.parseController import ParseController
+from controllers.importexportController import ImportExportController
 from CUI.cui import CUI
 
 exec_bad_chars = set('{}()[],;+*\/')
@@ -35,6 +36,7 @@ class EntityView:
         self.RController = RandomController()
         self.GController = GraphController()
         self.PController = ParseController()
+        self.IEController = ImportExportController()
 
         self.CUI.addField(f"Add {self.instance.__name__}", lambda: self.__add())
         self.CUI.addField(f"{self.instance.__name__}", lambda: self.__getItems())
@@ -45,6 +47,8 @@ class EntityView:
             self.CUI.addField("Search by title fragment", lambda: self.__searchNewsTitle())
             self.CUI.addField("Search by rating range", lambda: self.__searchNewsRating())
             self.CUI.addField("Search by date range", lambda: self.__searchNewsDate())
+            self.CUI.addField("Import", lambda: self.__import())
+            self.CUI.addField("Export", lambda: self.__export())
 
 
     def __generateRows(self):
@@ -71,10 +75,34 @@ class EntityView:
         itemMenu = CUI(self.instance.__name__)
         self.itemsCurrentMenu[1] = itemMenu
         try:
-            itemMenu.setError("Please wait, this may take a long time...")
-            time = self.PController.parseDataset()
+            time = self.IEController.parseDataset()
             itemMenu.setError(time + " (done)")
-            itemMenu.deleteField("Parse MIND dataset")
+        except Exception as err:
+            itemMenu.setError(str(err))
+
+    def __import(self):
+        itemMenu = CUI(self.instance.__name__)
+        self.itemsCurrentMenu[1] = itemMenu
+        try:
+            time = self.IEController.importNews()
+            self.IEController.importTags()
+            self.IEController.importTopics()
+            self.IEController.importRatings()
+            self.IEController.importLinks()
+            itemMenu.setError(time + " (done)")
+        except Exception as err:
+            itemMenu.setError(str(err))
+
+    def __export(self):
+        itemMenu = CUI(self.instance.__name__)
+        self.itemsCurrentMenu[1] = itemMenu
+        try:
+            time = self.IEController.exportNews()
+            self.IEController.exportTags()
+            self.IEController.exportTopics()
+            self.IEController.exportRatings()
+            self.IEController.exportLinks()
+            itemMenu.setError(time + " (done)")
         except Exception as err:
             itemMenu.setError(str(err))
 

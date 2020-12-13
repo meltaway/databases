@@ -5,6 +5,7 @@ from models.newsModel import News
 from models.tagModel import Tag
 from models.topicModel import Topic
 from models.ratingsModel import Rating
+from controllers.importexportController import ImportExportController
 
 #recreate_database()
 
