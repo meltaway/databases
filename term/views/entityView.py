@@ -49,7 +49,9 @@ class EntityView:
             self.CUI.addField("Search by date range", lambda: self.__searchNewsDate())
             self.CUI.addField("Import", lambda: self.__import())
             self.CUI.addField("Export", lambda: self.__export())
-
+        if self.instance.__name__ == "Tag":
+            self.CUI.addField("Show top 10 rated tags", lambda: self.__getTagGraph())
+            self.CUI.addField("Show top 10 trending tags", lambda: self.__getTrendingTagGraph())
 
     def __generateRows(self):
         itemMenu = CUI(self.instance.__name__)
@@ -75,7 +77,7 @@ class EntityView:
         itemMenu = CUI(self.instance.__name__)
         self.itemsCurrentMenu[1] = itemMenu
         try:
-            time = self.IEController.parseDataset()
+            time = self.PController.parseDataset()
             itemMenu.setError(time + " (done)")
         except Exception as err:
             itemMenu.setError(str(err))
@@ -317,6 +319,12 @@ class EntityView:
 
     def __getRatingsGraph(self, nid: int):
         self.GController.getRatingsGraph(nid)
+
+    def __getTagGraph(self):
+        self.GController.getTopTagsGraph()
+
+    def __getTrendingTagGraph(self):
+        self.GController.getTrendingTags()
 
     def __changePageParams(self, page: int, per_page: int):
         self.page = page
